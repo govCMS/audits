@@ -1,0 +1,62 @@
+collect:
+  drush-modules-result:
+    command:
+      cmd: drush
+      args:
+      - pm:list
+      - --status=enabled
+      - --format=list
+
+analyse:
+  Deprecated modules found:
+    allowed:list:
+      input: drush-modules-result
+      key: stdout
+      deprecated:
+        - action
+        - block_inactive_users
+        - ckan_connect
+        - clamav
+        - config_filter
+        - dvf
+        - dvf_ckan
+        - dvf_csv
+        - dvf_json
+        - field_layout
+        - forum
+        - google_analytics
+        - govcms8_calendar_item
+        - govcms8_foundations
+        - govcms8_layouts
+        - govcms8_modifiers
+        - graphql
+        - help_topics
+        - jquery_ui
+        - jquery_ui_accordion
+        - jquery_ui_draggable
+        - jquery_ui_droppable
+        - jquery_ui_resizable
+        - mailsystem
+        - page_manager
+        - page_manager_ui
+        - panelizer
+        - panels
+        - panels_ipe
+        - permissions_by_entity
+        - permissions_by_term
+        - redirect_404
+        - restui
+        - tour
+        - video_embed_field
+        - video_embed_media
+        - video_embed_wysiwyg
+        - webform_icheck
+        - webform_location_geocomplete
+        - webform_location_places
+        - webform_shortcuts
+        - webform_toggles
+      not-strict: true
+      breach-format:
+        type: key-value
+        value-label: 'x'
+        value: '{{ .Breach.Value }}'

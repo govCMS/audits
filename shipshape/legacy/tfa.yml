@@ -1,0 +1,112 @@
+collect:
+  db-tfa-module:
+    command:
+      cmd: bash
+      args:
+      - -c
+      - |
+        set -o pipefail
+        drush pm:list --no-core --package=Security --fields=name,status --format=json | jq -r '.tfa.status'
+
+  tfa-encryption-key:
+    command:
+      cmd: bash
+      args:
+      - -c
+      - |
+        set -o pipefail
+        env | grep KEY_ENCRYPT_TFA
+      ignore-error: true
+
+  db-tfa-config-enabled:
+    command:
+      cmd: bash
+      args:
+      - -c
+      - |
+        set -o pipefail
+        drush config:get tfa.settings enabled --include-overridden --format=json | jq -r ".[\"tfa.settings:enabled\"]"
+      ignore-error: true
+
+  db-tfa-config-required-roles:
+    command:
+      cmd: bash
+      args:
+      - -c
+      - |
+        set -o pipefail
+        drush config:get tfa.settings required_roles --include-overridden --format=json | jq -r ".[\"tfa.settings:required_roles\"]"
+      ignore-error: true
+
+  db-tfa-config-active-plugins-count:
+    command:
+      cmd: bash
+      args:
+      - -c
+      - |
+        set -o pipefail
+        drush config:get tfa.settings allowed_validation_plugins --include-overridden --format=json | jq -r '.["tfa.settings:allowed_validation_plugins"] | length'
+      ignore-error: true
+
+analyse:
+  tfa-module-absent:
+    equals:
+      description: tfa module not in codebase
+      input: db-tfa-module
+      key: stdout
+      value: 'null'
+
+  tfa-active-plugin-absent:
+    equals:
+      description: tfa does not have any plugin selected
+      input: db-tfa-config-active-plugins-count
+      key: stdout
+      value: '0'
+
+  tfa-encryption-key-absent:
+    equals:
+      description: The KEY_ENCRYPT_TFA environment variable is not set
+      input: tfa-encryption-key
+      key: code
+      value: '1'
+
+  db-tfa-module-disabled:
+    equals:
+      description: tfa module is disabled
+      input: db-tfa-module
+      key: stdout
+      value: Disabled
+      remediation:
+        cmd: drush
+        args:
+        - pm:enable
+        - tfa
+        - real_aes
+        - --yes
+        msg: tfa module has been successfully enabled
+
+  db-tfa-config-disabled:
+    not:equals:
+      description: tfa is disabled in config
+      input: db-tfa-config-enabled
+      key: stdout
+      value: true
+      remediation:
+        cmd: bash
+        args:
+        - -c
+        - |
+          set -e
+          drush pm:enable tfa real_aes --yes
+          drush config:set tfa.settings enabled 1 --yes
+        msg: tfa config has been successfully enabled
+
+  db-tfa-no-role-required:
+    equals:
+      description: tfa has no required roles
+      input: db-tfa-config-required-roles
+      key: stdout
+      value: '[]'
+      remediation:
+        cmd: /auditor/scripts/tfa.sh
+        msg: tfa config has been updated to require a role

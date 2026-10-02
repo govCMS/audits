@@ -1,0 +1,59 @@
+collect:
+  # Lookup all webform files.
+  webform-files:
+    file:lookup:
+      pattern: webform.webform.*.yml
+      file-names-only: false
+
+  # Extract the titles and handlers from the webform files.
+  webform-titles:
+    yaml:key:
+      input: webform-files
+      path: title
+  webform-handlers:
+    yaml:key:
+      input: webform-files
+      path: handlers
+      nodes-only: true
+
+  # Extract the email settings from the webform handlers.
+  to-mail:
+    yaml:key:
+      input: webform-handlers
+      path: settings.to_mail
+  cc-mail:
+    yaml:key:
+      input: webform-handlers
+      path: settings.cc_mail
+  bcc-mail:
+    yaml:key:
+      input: webform-handlers
+      path: settings.bcc_mail
+
+analyse:
+  wrong-to-mail:
+    regex:match:
+      description: Found token in webform handler 'to:' email field
+      input: to-mail
+      pattern: '\[(.*)\]'
+      ignore: '[current-user]'
+      breach-format: &x-breach-format
+        type: key-value
+        key-label: webform
+        key: ' {{ lookupFactAsStringMap "webform-titles" .Breach.Key }}'
+        value-label: 'Handler "{{ .Breach.ValueLabel }}" has token'
+        value: '{{ .Breach.Value }}'
+  wrong-cc-mail:
+    regex:match:
+      description: Found token in webform handler 'cc:' email field
+      input: cc-mail
+      pattern: '\[(.*)\]'
+      ignore: '[current-user]'
+      breach-format: *x-breach-format
+  wrong-bcc-mail:
+    regex:match:
+      description: Found token in webform handler 'bcc:' email field
+      input: bcc-mail
+      pattern: '\[(.*)\]'
+      ignore: '[current-user]'
+      breach-format: *x-breach-format
